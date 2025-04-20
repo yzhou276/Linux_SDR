@@ -15,6 +15,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <stdint.h>
+#include <string.h>
+#include <time.h>
 
 /* definition */
 
@@ -68,6 +71,7 @@ volatile unsigned int * get_a_pointer(unsigned int phys_addr)
         return NULL;
     }
 	volatile unsigned int *radio_base = (volatile unsigned int *)map_base; 
+    close(mem_fd); // close the file descriptor after mapping
 	return (radio_base);
 }
 
@@ -93,6 +97,25 @@ volatile unsigned int * get_pointer_to_axi_fifo()
         return NULL;
     }
     return axi_fifo_base;
+}
+
+void fifo_reset(volatile unsigned int *axi_fifo_base)
+{
+    // reset the FIFO by writing the reset key to the reset register
+    axi_fifo_base[AXI4_STREAM_FIFO_RDFR_OFFSET/4] = AXI4_STREAM_FIFO_RDFR_RESET_KEY;
+}
+
+unsigned int fifo_get_current_occupancy(volatile unsigned int *axi_fifo_base)
+{
+    // get the current occupancy of the FIFO by reading the occupancy register
+    unsigned int occupancy = axi_fifo_base[AXI4_STREAM_FIFO_RDFO_OFFSET/4];
+    return occupancy;
+}
+
+unsigned int fifo_get_data(volatile unsigned int *axi_fifo_base)
+{
+    // get the data from the FIFO by reading the data register
+    return axi_fifo_base[AXI4_STREAM_FIFO_RDFD_OFFSET/4];
 }
 
 // ----------------------------------------------------------------------------------------------------
@@ -121,7 +144,7 @@ void disable_radio_tuner(volatile unsigned int *radio_base)
 {
     // disable the radio tuner by writing 1 to the reset bit in the control register
     *(radio_base + RADIO_TUNER_CONTROL_REG_OFFSET) |= RADIO_TUNER_CTRL_RESET_MASK;
-    print_reg(radio_base, RADIO_TUNER_CONTROL_REG_OFFSET);
+    //print_reg(radio_base, RADIO_TUNER_CONTROL_REG_OFFSET);
 }
 
 /**
@@ -133,7 +156,7 @@ void enable_radio_tuner(volatile unsigned int *radio_base)
 {
     // enable the radio tuner by writing 0 to the reset bit in the control register
     *(radio_base + RADIO_TUNER_CONTROL_REG_OFFSET) &= ~RADIO_TUNER_CTRL_RESET_MASK;
-    print_reg(radio_base, RADIO_TUNER_CONTROL_REG_OFFSET);
+    //print_reg(radio_base, RADIO_TUNER_CONTROL_REG_OFFSET);
 }
 
 /**
@@ -151,7 +174,7 @@ void set_radio_tuner_stream(volatile unsigned int *radio_base, int enable)
         // disable the radio tuner stream by writing 0 to the stream enable bit in the control register
         *(radio_base + RADIO_TUNER_CONTROL_REG_OFFSET) &= ~RADIO_TUNER_CTRL_STREAM_EN_MASK;
     }
-    print_reg(radio_base, RADIO_TUNER_CONTROL_REG_OFFSET);
+    //print_reg(radio_base, RADIO_TUNER_CONTROL_REG_OFFSET);
 }
 
 /**
@@ -187,17 +210,60 @@ int main(int argc, char const *argv[])
         fprintf(stderr, "Failed to get radio tuner base address\n");
         return -1;
     }
+    volatile unsigned int *axi_fifo_base = get_pointer_to_axi_fifo();
+    if (axi_fifo_base == NULL) {
+        fprintf(stderr, "Failed to get AXI4 Stream FIFO base address\n");
+        return -1;
+    }
 
     enable_radio_tuner(radio_base);
     printf("Tuning Radio to 30MHz\n\r");
     radioTuner_tuneRadio(radio_base, 30000000); // tune to 30MHz
     printf("Fake ADC frequency to 30.01MHz\r\n");
     radioTuner_setAdcFreq(radio_base, 30001000); // set fake ADC frequency to 30.01MHz
-
+    printf("Enable the radio tuner stream\r\n");
+    set_radio_tuner_stream(radio_base, 1); // enable the radio tuner stream
 
     printf("I am going to read 10 seconds worth of data now\n");
 
+    unsigned int numSamplesRead = 0;
+    unsigned int targetSamples  = 480000;
+    struct timespec start_time, end_time;
 
+    fifo_reset(axi_fifo_base); // reset the FIFO
+
+    clock_gettime(CLOCK_MONOTONIC, &start_time); // get the start time
+
+    while(numSamplesRead < targetSamples)
+    {
+        unsigned int occupancy = fifo_get_current_occupancy(axi_fifo_base); // get the current occupancy of the FIFO 
+        while(occupancy > 0 && numSamplesRead < targetSamples) // read data from the FIFO until it is empty or we have read enough samples
+        {
+            fifo_get_data(axi_fifo_base);
+            occupancy--; // decrement the occupancy
+            numSamplesRead++; // increment the number of samples read
+        }
+        if(numSamplesRead == targetSamples) // check if we have read enough samples
+        {
+            break; // exit the loop if we have read enough samples
+        }
+        usleep(50000); // sleep for 50ms to avoid busy waiting
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &end_time); // get the end time
+    double elapsed_time = (end_time.tv_sec - start_time.tv_sec);
+    elapsed_time += (end_time.tv_nsec - start_time.tv_nsec) / 1e9; // calculate the elapsed time in seconds
+    printf("Elapsed time: %.9f seconds\n", elapsed_time);
+
+    printf("I have read %u samples from the FIFO\n", numSamplesRead);
+    printf("Disabling the radio tuner stream\r\n");
+    set_radio_tuner_stream(radio_base, 0);  // disable the radio tuner stream
+    printf("Disabling the radio tuner\r\n");
+    disable_radio_tuner(radio_base);        // disable the radio tuner
+    printf("Disabling the radio FIFO\r\n");
+    fifo_reset(axi_fifo_base);              // reset the FIFO
+    munmap((void *)radio_base, 4096);       // unmap the radio tuner base address
+    munmap((void *)axi_fifo_base, 4096);    // unmap the AXI4 Stream FIFO base address
 
     return 0;
 }
