@@ -20,3 +20,15 @@ Usage: ./udpSender -i <ip> -p <port> -n <num_packets>
 The directory has the executable's C source file and a python script for receiving UDP packets. You can run the python script on either WinOS or Linux.
 
 To use the python script, run `python3.exe udpReceiver.py -p {port_listen_on}`
+
+## milestone 2 - Radio + Custom FIFO Peripheral
+
+The PL design includes an axi4 stream fifo for sending data from PL into PS
+
+The milestone 2 directory contains following files:
+* design_1_wrapper.bit.bin (the fpga bitstream binary)
+* fifo_reader (arm executable that reads 480,000 samples from the FIFO)
+* fifo_reader.c (c source file)
+
+fifo base address: 0x43c00000
+radio tuner base address: 0x43c10000
