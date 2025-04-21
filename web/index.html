@@ -1,0 +1,22 @@
+<HTML>
+    <TITLE>Zybo Z7 Radio
+    </TITLE>
+    <BODY BGCOLOR="lightblue">
+    <H1>Zybo Z7 Radio Page</H1>
+    <a href="./cgi-bin/setup_all.sh">Initialize PL/Radio</a>
+    <br>The above link will initialize the PL with your bitfile, configure the codec, and start the udp-streamer program
+    <p>
+    <H2>Radio Tuning</H2>
+    <form action = "/cgi-bin/configure_radio.py" method = "post">
+        Fake ADC Frequency (Hz): <input type = "number" name = "adc_freq_hz"><br />
+        Radio Tune Center Frequency (Hz): <input type = "number" name = "tune_freq_hz" /> 
+        <input type="checkbox" id="streaming" name="streaming" value="streaming">
+        <label for="streaming"> Enable UDP Streaming</label><br> 
+        <input type = "submit" value = "Submit" />
+        </form>
+    <H2>Milestones / Demonstrations</H2>
+    <a href="./cgi-bin/test_radio">Run Lab 10 test_radio</a><br>
+    <a href="./cgi-bin/run_milestone">Run Milestone</a>  
+    </BODY>
+    </HTML>
+    
