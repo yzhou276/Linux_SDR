@@ -19,6 +19,7 @@ char *dest_ip = DEFAULT_DEST_IP;                // Destination IP address
 int dest_port = DEFAULT_UDP_DEST_PORT;          // Destination UDP port
 int timeout = 0;                                // Timeout in seconds (default: infinite)
 dataPacket packet;                              // Data packet structure
+uint32_t packetID = 0;                          // Packet ID
 sem_t data_ready;                               // Semaphore for data ready signal
 pthread_mutex_t mutex;                          // Mutex for thread synchronization
 volatile sig_atomic_t terminate = 0;            // Termination flag
@@ -55,10 +56,24 @@ int main(int argc, char const *argv[])
         fprintf(stderr, "Invalid port value: %d\n", dest_port);
         return -1;
     }
-    if(inet_pton(AF_INET, dest_ip, NULL) <= 0) {
+    struct sockaddr_in sa;
+    // check if the IP address is valid
+    if(inet_pton(AF_INET, dest_ip, &sa) <= 0) {
         fprintf(stderr, "Invalid IP address: %s\n", dest_ip);
         return -1;
     }
+
+    // summarize the arguments
+    printf("Summary:\n");
+    printf("    Destination IP: %s\n", dest_ip);
+    printf("    Destination Port: %d\n", dest_port);
+    if(timeout > 0) {
+        printf("    Timeout: %d seconds\n", timeout);
+    } else {
+        printf("    Timeout: infinite\n");
+    }
+    printf("    Packet size: %d bytes\n", PACKET_SIZE);
+    printf("    Number of samples per packet: %d\n", NUM_SAMPLES);
 
     // initialize the semaphore and mutex
     if(sem_init(&data_ready, 0, 0) != 0) {
@@ -71,8 +86,8 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-    pthread fifoReaderThread;
-    pthread udpSenderThread;
+    pthread_t fifoReaderThread;
+    pthread_t udpSenderThread;
     // create the FIFO reader thread
     if(pthread_create(&fifoReaderThread, NULL, fifoReaderTask, NULL) != 0) {
         perror("Failed to create FIFO reader thread");
@@ -109,9 +124,53 @@ void* fifoReaderTask(void *arg)
         fprintf(stderr, "Failed to get AXI FIFO base address\n");
         pthread_exit(NULL);
     }
+    // reset the FIFO
+    fifo_reset(axi_fifo_base); // reset the FIFO
+    printf("[Reader]: FIFO Reader Thread started\n");
+    unsigned int numSamplesRead = 0; // number of samples read for current packet
+    unsigned int targetSamples = NUM_SAMPLES; // target number of samples to read for each packet
 
+    while (!terminate) {
 
+        // process reading data from the FIFO to fill the packet
+        while(numSamplesRead < targetSamples) {
+            // get the current occupancy of the FIFO
+            unsigned int occupancy = fifo_get_current_occupancy(axi_fifo_base);
+            if (occupancy > 0) {
+                // lock the mutex before accessing shared data
+                pthread_mutex_lock(&mutex);
+                // read data from the FIFO
+                for (unsigned int i = 0; i < occupancy; i++) {
+                    packet.sdrData[numSamplesRead] = fifo_get_data(axi_fifo_base);
+                    ++numSamplesRead; // increment the number of samples read
+                    if (numSamplesRead >= targetSamples) {
+                        break; // exit the loop if we have read enough samples
+                    }
+                }
 
+                pthread_mutex_unlock(&mutex); // unlock the mutex after reading data
+                
+                
+            }
+            usleep(2000); // sleep for 2ms to avoid busy waiting
+            
+            // check if termination signal is received
+            if (terminate) {
+                break; // exit the loop if termination signal is received
+            }
+        }
+
+        // check if we have read enough samples for the current packet
+        if (numSamplesRead >= targetSamples) {
+            // signal that data is ready to be sent
+            packet.packetID = packetID++;
+            sem_post(&data_ready); // signal that data is ready
+            numSamplesRead = 0; // reset the number of samples read for the next packet
+        }
+
+    }
+
+    printf("[Reader]: FIFO Reader Thread terminated\n");
 }
 
 void* udpSenderTask(void* arg)
@@ -134,9 +193,35 @@ void* udpSenderTask(void* arg)
         pthread_exit(NULL);
     }
 
+    struct timespec ts;
+
+    printf("[Sender]: UDP Sender Thread started\n");
+
     // send packets to the server
     while (!terminate) {
-        sem_wait(&data_ready); // wait for data to be ready
+        
+        // check if the timeout has occurred
+        if(timeout > 0)
+        {
+            clock_gettime(CLOCK_REALTIME, &ts); // get the current time
+            ts.tv_sec += timeout; // set the timeout
+            if(sem_timedwait(&data_ready, &ts) == -1)
+            {
+                if(errno == ETIMEDOUT) {
+                    printf("[Sender]: Timeout occurred, terminating thread\n");
+                    terminate = 1; // set the termination flag
+                    break; // exit the loop
+                } else {
+                    perror("Error waiting for semaphore");
+                    terminate = 1; // set the termination flag
+                    break; // exit the loop
+                }
+            }
+        }
+        else
+        {
+            sem_wait(&data_ready); // wait for data to be ready
+        }
 
         // lock the mutex before accessing shared data
         pthread_mutex_lock(&mutex);
@@ -148,10 +233,15 @@ void* udpSenderTask(void* arg)
             close(sockfd);
             pthread_exit(NULL);
         }
-        printf("Sent packet ID: %d\n", packet.packetID);
 
+        if(packetID % 500 == 0 && packetID != 0) {
+            printf("Sent %d packets to %s : %d\n", packetID, dest_ip, dest_port);
+        }
         pthread_mutex_unlock(&mutex); // unlock the mutex after sending the packet
     }
+
+    // report the number of packets sent
+    printf("Total:sent %d packets to %s : %d\n", packetID, dest_ip, dest_port);
 
     close(sockfd); // close the socket
     pthread_exit(NULL);
@@ -204,6 +294,7 @@ unsigned int fifo_get_current_occupancy(volatile unsigned int *axi_fifo_base)
 {
     // get the current occupancy of the FIFO by reading the occupancy register
     unsigned int occupancy = axi_fifo_base[AXI4_STREAM_FIFO_RDFO_OFFSET/4];
+    //printf("FIFO occupancy: %u\n", occupancy); // print the occupancy for debugging
     return occupancy;
 }
 

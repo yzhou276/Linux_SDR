@@ -27,6 +27,7 @@
 #include <time.h>
 #include <pthread.h>
 #include <signal.h>
+#include <semaphore.h>
 
 /**
  * @brief The transmit path of the IP core is not enabled.
@@ -48,7 +49,7 @@
  * @brief UDP default settings
  */
 #define DEFAULT_UDP_DEST_PORT   25344           // Default UDP port
-#define DEFAULT_DEST_IP         "192.168.1.24"  // Default destination IP address
+#define DEFAULT_DEST_IP         "192.168.1.3"   // Default destination IP address
 
 /**
  * @brief Data packet structure
