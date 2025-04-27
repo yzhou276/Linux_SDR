@@ -1,6 +1,23 @@
 # Linux_SDR
 Linux Software Defined Radio
 
+<h3>Table of Contents</h3>
+
+- [Linux\_SDR](#linux_sdr)
+  - [Web Setup Instructions](#web-setup-instructions)
+    - [1. Boot Petalinux](#1-boot-petalinux)
+    - [2. Configure Network Settings](#2-configure-network-settings)
+    - [3. Transfer the Web Project to the Board](#3-transfer-the-web-project-to-the-board)
+    - [4. Extract the Web Project](#4-extract-the-web-project)
+    - [5. Start the HTTP Server](#5-start-the-http-server)
+    - [6. Access the Web Interface](#6-access-the-web-interface)
+  - [Radio Tuner Control](#radio-tuner-control)
+    - [PL and UDP Streamer Initialization](#pl-and-udp-streamer-initialization)
+    - [Radio Tuner Control and Operation](#radio-tuner-control-and-operation)
+    - [Milestone and Test Radio Demonstrations](#milestone-and-test-radio-demonstrations)
+  - [milestone 1 - UDP Packet Sending](#milestone-1---udp-packet-sending)
+  - [milestone 2 - Radio + Custom FIFO Peripheral](#milestone-2---radio--custom-fifo-peripheral)
+
 ## Web Setup Instructions
 To set up the web interface, you will need the compressed project folder `linux_sdr_Zhou.tgz`, available [here](/submission/linux_sdr_Zhou.tgz).
 
@@ -67,6 +84,30 @@ To set up the web interface, you will need the compressed project folder `linux_
 - Open a web browser and navigate to:
   `http://<ip address>:<port>`
 - The `index.html` page will load, allowing you to control the radio tuner through the browser.
+
+![Radio Tuner Home Page](/images/web_home.png "Home Page")
+
+
+## Radio Tuner Control
+
+### PL and UDP Streamer Initialization
+
+![PL and UDP Streamer Initialization](/images/pl_config.png "pl and udp streamer init")
+After pressing the **Initialize PL/Radio** button, the FPGA will be programmed by the onboard bitstream binary. The embedded CODEC will be initialized through the PS I2C interface. Finally, A UDP FIFO streaming engine will be initiated. User can configure the UDP packets' destination IP address and port number by changing the fields
+
+### Radio Tuner Control and Operation
+
+![Radio Tuner Control and Operation](/images/radio_tuning.png "Radio Tuner Control and Operation")
+The functionalities of the **Radio Tuning** section are described in the project description. I added the **Radio Tuner Control** section, allowing users to enable/disable the radio DDC tuner peripheral.
+
+### Milestone and Test Radio Demonstrations
+
+![Milestone and Test Radio Demonstrations](/images/milestone_demo.png "Milestone and Test Radio Demonstrations")
+The demonstration section has two options:
+* option one - Run Lab 10 Radio Test
+  The radio test plays the University of Maryland victory song for a few seconds then measures the AXI4 protocol data rate. The test script output will be displayed on the browser after running.
+
+* option two - Send UDP Packets
 
 ## milestone 1 - UDP Packet Sending
 
