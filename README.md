@@ -65,7 +65,7 @@ To set up the web interface, you will need the compressed project folder `linux_
 
 ### 6. Access the Web Interface
 - Open a web browser and navigate to:
-  http://<ip address>:<port>
+  `http://<ip address>:<port>`
 - The `index.html` page will load, allowing you to control the radio tuner through the browser.
 
 ## milestone 1 - UDP Packet Sending
