@@ -28,6 +28,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <semaphore.h>
+#include <stdbool.h>
 
 /**
  * @brief The transmit path of the IP core is not enabled.

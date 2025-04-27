@@ -178,7 +178,7 @@ void set_radio_tuner_stream(volatile unsigned int *radio_base, int enable)
 }
 
 /**
- * @brief Set the DDS frequency of the radio tuner
+ * @brief Set the mixer frequency of the radio tuner
  * 
  * @param ptrToRadio Pointer to the radio tuner base address
  * @param tune_frequency Frequency to set in MHz

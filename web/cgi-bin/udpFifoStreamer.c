@@ -141,7 +141,19 @@ void* fifoReaderTask(void *arg)
                 pthread_mutex_lock(&mutex);
                 // read data from the FIFO
                 for (unsigned int i = 0; i < occupancy; i++) {
-                    packet.sdrData[numSamplesRead] = fifo_get_data(axi_fifo_base);
+                    packet.sdrData[numSamplesRead] = fifo_get_data(axi_fifo_base); // read data from the FIFO
+
+                    // // swap bytes inside each int16
+                    // uint32_t dataTmp = fifo_get_data(axi_fifo_base);
+                    // int16_t hi = (dataTmp >> 16) & 0xFFFF;     // high int16
+                    // int16_t lo = dataTmp & 0xFFFF;             // low int16
+                    // // Swap bytes inside each int16
+                    // hi = ((hi & 0x00FF) << 8) | ((hi & 0xFF00) >> 8);
+                    // lo = ((lo & 0x00FF) << 8) | ((lo & 0xFF00) >> 8);
+                
+                    // // Repack them together
+                    // packet.sdrData[numSamplesRead] = (hi << 16) | lo;
+
                     ++numSamplesRead; // increment the number of samples read
                     if (numSamplesRead >= targetSamples) {
                         break; // exit the loop if we have read enough samples
@@ -152,7 +164,7 @@ void* fifoReaderTask(void *arg)
                 
                 
             }
-            usleep(2000); // sleep for 2ms to avoid busy waiting
+            usleep(1000); // sleep for 2ms to avoid busy waiting
             
             // check if termination signal is received
             if (terminate) {
@@ -234,8 +246,13 @@ void* udpSenderTask(void* arg)
             pthread_exit(NULL);
         }
 
-        if(packetID % 500 == 0 && packetID != 0) {
+        if(packetID % 1000 == 0 && packetID != 0) {
             printf("Sent %d packets to %s : %d\n", packetID, dest_ip, dest_port);
+
+            // int16_t data_I = (packet.sdrData[0] >> 16) & (0xFFFF);  // get the first sample
+            // int16_t data_Q = packet.sdrData[0] & (0xFFFF);          // get the second sample
+            // printf("First sample: %d %d\n", data_I, data_Q);        // print the first sample for debugging
+
         }
         pthread_mutex_unlock(&mutex); // unlock the mutex after sending the packet
     }
