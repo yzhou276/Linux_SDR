@@ -93,16 +93,19 @@ To set up the web interface, you will need the compressed project folder `linux_
 ### PL and UDP Streamer Initialization
 
 ![PL and UDP Streamer Initialization](/images/pl_config.png "pl and udp streamer init")
+
 After pressing the **Initialize PL/Radio** button, the FPGA will be programmed by the onboard bitstream binary. The embedded CODEC will be initialized through the PS I2C interface. Finally, A UDP FIFO streaming engine will be initiated. User can configure the UDP packets' destination IP address and port number by changing the fields
 
 ### Radio Tuner Control and Operation
 
 ![Radio Tuner Control and Operation](/images/radio_tuning.png "Radio Tuner Control and Operation")
+
 The functionalities of the **Radio Tuning** section are described in the project description. I added the **Radio Tuner Control** section, allowing users to enable/disable the radio DDC tuner peripheral.
 
 ### Milestone and Test Radio Demonstrations
 
 ![Milestone and Test Radio Demonstrations](/images/milestone_demo.png "Milestone and Test Radio Demonstrations")
+
 The demonstration section has two options:
 * option one - Run Lab 10 Radio Test
   The radio test plays the University of Maryland victory song for a few seconds then measures the AXI4 protocol data rate. The test script output will be displayed on the browser after running.
