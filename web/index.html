@@ -3,7 +3,11 @@
     </TITLE>
     <BODY BGCOLOR="lightblue">
     <H1>Zybo Z7 Radio Page</H1>
-    <a href="./cgi-bin/setup_all.sh">Initialize PL/Radio</a>
+    <form action="./cgi-bin/setup_all.sh" method="post">
+        Destination IP: <input type="text" name="ip" value="192.168.1.3"><br>
+        Destination Port: <input type="text" name="port" value="25344"><br>
+        <input type="submit" value="Initialize PL/Radio">
+    </form>
     <br>The above link will initialize the PL with your bitfile, configure the codec, and start the udp-streamer program
     <p>
     <H2>Radio Tuning</H2>
@@ -21,8 +25,16 @@
         <button type="submit" name="action" value="reset">Reset</button>
     </form>
     <H2>Milestones / Demonstrations</H2>
+    <h3> Test Radio </h3>
     <a href="./cgi-bin/test_radio">Run Lab 10 test_radio</a><br>
-    <a href="./cgi-bin/run_milestone">Run Milestone 1</a>  
+    <h3> Milestone 1 - Send UDP Packets </h3>
+    <p> This will send UDP packets to the destination IP and port specified below. </p>
+    <form action="./cgi-bin/run_milestone.sh" method="post">
+        Destination IP: <input type="text" name="ip" value="192.168.1.3"><br>
+        Destination Port: <input type="text" name="port" value="25340"><br>
+        Number of Packets: <input type="text" name="num_packets" value="100"><br>
+        <input type="submit" value="Send UDP Packets">
+    </form>
     </BODY>
     </HTML>
     
